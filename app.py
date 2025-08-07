@@ -274,12 +274,53 @@ def convert_to_ascii_safe(text):
     
     return ascii_result
 
+def convert_for_pdf_display(text, is_header=False):
+    """テキストをPDF表示用に変換（ヘッダーは英語、業者名は日本語保持）"""
+    if not text:
+        return ''
+    
+    # ヘッダーの場合は英語に変換
+    if is_header:
+        header_map = {
+            '業者支払表': 'Vendor Payment List',
+            '支払日': 'Payment Date',
+            '送金会社名': 'Remittance Company',
+            '作成日時': 'Created At',
+            '業者名': 'Vendor Name',
+            '金額': 'Amount',
+            '摘要': 'Description',
+            '合計': 'Total',
+            '小計': 'Subtotal'
+        }
+        for japanese, english in header_map.items():
+            text = text.replace(japanese, english)
+        return text
+    
+    # 業者名や摘要は日本語を保持し、問題のある文字のみ置換
+    # 特殊文字や記号のみ置換
+    result = text
+    problem_chars = {
+        '【': '[',
+        '】': ']',
+        '「': '"',
+        '」': '"',
+        '・': '-',
+        '‐': '-',  # ハイフン
+        '–': '-',  # enダッシュ
+        '—': '-',  # emダッシュ
+        '～': '~',  # 全角チルダ
+    }
+    
+    for problem_char, replacement in problem_chars.items():
+        result = result.replace(problem_char, replacement)
+    
+    return result
+
 def generate_payment_pdf(payment_data, vendors):
-    """支払表のPDFを生成（クラウド環境対応）"""
-    # クラウド環境対応: ReportLabの標準フォントを使用
-    # 日本語文字は英数字・記号に変換して表示
+    """支払表のPDFを生成（業者名日本語対応）"""
+    # シンプルなアプローチ: Helveticaで日本語を処理
     japanese_font = 'Helvetica'
-    print("クラウド環境対応: Helveticaフォントを使用してPDFを生成します")
+    print("業者名日本語対応 PDFを生成します")
     
     # PDFファイル名を生成
     pdf_filename = f"payment_list_{payment_data['id']}.pdf"
@@ -307,16 +348,16 @@ def generate_payment_pdf(payment_data, vendors):
         alignment=1  # 中央揃え
     )
     
-    # タイトル（ASCII安全な文字に変換）
-    title = Paragraph(convert_to_ascii_safe("業者支払表"), title_style)
+    # タイトル（ヘッダーは英語表示）
+    title = Paragraph(convert_for_pdf_display("業者支払表", is_header=True), title_style)
     elements.append(title)
     elements.append(Spacer(1, 12))
     
-    # 支払情報（ASCII安全な文字に変換）
+    # 支払情報（ヘッダーは英語、値は日本語保持）
     info_data = [
-        [convert_to_ascii_safe('支払日'), payment_data['payment_date']],
-        [convert_to_ascii_safe('送金会社名'), convert_to_ascii_safe(payment_data['remittance_company'])],
-        [convert_to_ascii_safe('作成日時'), payment_data['created_at'][:19].replace('T', ' ')]
+        [convert_for_pdf_display('支払日', is_header=True), payment_data['payment_date']],
+        [convert_for_pdf_display('送金会社名', is_header=True), convert_for_pdf_display(payment_data['remittance_company'])],
+        [convert_for_pdf_display('作成日時', is_header=True), payment_data['created_at'][:19].replace('T', ' ')]
     ]
     
     info_table = Table(info_data, colWidths=[40*mm, 100*mm])
@@ -341,8 +382,8 @@ def generate_payment_pdf(payment_data, vendors):
             vendor_groups[vendor_id] = []
         vendor_groups[vendor_id].append(item)
     
-    # 支払明細テーブル（ASCII安全な文字に変換）
-    table_data = [['No.', convert_to_ascii_safe('業者名'), convert_to_ascii_safe('金額'), convert_to_ascii_safe('摘要')]]
+    # 支払明細テーブル（ヘッダーは英語表示）
+    table_data = [['No.', convert_for_pdf_display('業者名', is_header=True), convert_for_pdf_display('金額', is_header=True), convert_for_pdf_display('摘要', is_header=True)]]
     
     total_amount = 0
     row_number = 1
@@ -360,9 +401,9 @@ def generate_payment_pdf(payment_data, vendors):
             
             table_data.append([
                 str(row_number),
-                convert_to_ascii_safe(vendor.get('name', '不明')),
+                convert_for_pdf_display(vendor.get('name', '不明')),  # 業者名は日本語保持
                 f"{amount:,}",
-                convert_to_ascii_safe(item.get('description', ''))
+                convert_for_pdf_display(item.get('description', ''))  # 摘要も日本語保持
             ])
             row_number += 1
         
@@ -370,13 +411,13 @@ def generate_payment_pdf(payment_data, vendors):
         if len(items) > 1:
             table_data.append([
                 '',
-                f"[{convert_to_ascii_safe(vendor.get('name', '不明'))} {convert_to_ascii_safe('小計')}]",
+                f"[{convert_for_pdf_display(vendor.get('name', '不明'))} {convert_for_pdf_display('小計', is_header=True)}]",  # 業者名は日本語、小計は英語
                 f"{vendor_subtotal:,}",
                 ''
             ])
     
     # 合計行を追加
-    table_data.append(['', convert_to_ascii_safe('合計'), f"{total_amount:,}", ''])
+    table_data.append(['', convert_for_pdf_display('合計', is_header=True), f"{total_amount:,}", ''])  # 合計は英語表示
     
     # テーブルを作成（摘要欄を大幅に拡大）
     payment_table = Table(table_data, colWidths=[15*mm, 60*mm, 30*mm, 85*mm])
