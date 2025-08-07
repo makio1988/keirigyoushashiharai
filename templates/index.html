@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>業者支払表・総合振込ファイル作成システム</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- サイドバー -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+                <div class="position-sticky pt-3">
+                    <h5 class="sidebar-heading">メニュー</h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="showSection('payment-section')">
+                                <i class="fas fa-money-bill-wave"></i> 支払表作成
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showSection('upload-section')">
+                                <i class="fas fa-upload"></i> マスターデータ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showSection('vendor-section')">
+                                <i class="fas fa-building"></i> 業者管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showSection('history-section')">
+                                <i class="fas fa-history"></i> 支払履歴
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- メインコンテンツ -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">業者支払表・総合振込ファイル作成システム</h1>
+                </div>
+
+                <!-- 支払表作成セクション -->
+                <div id="payment-section" class="content-section">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-calendar-alt"></i> 支払情報設定</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="payment-form">
+                                        <div class="mb-3">
+                                            <label for="payment-date" class="form-label">支払日</label>
+                                            <input type="date" class="form-control" id="payment-date" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="company-search" class="form-label">送金会社名</label>
+                                            <div class="company-search-container position-relative">
+                                                <input type="text" class="form-control" id="company-search" placeholder="会社名を入力して検索..." autocomplete="off" required>
+                                                <div id="company-search-results" class="company-search-results"></div>
+                                                <input type="hidden" id="remittance-company" name="remittance-company">
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-plus-circle"></i> 業者選択・金額入力</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="item-form">
+                                        <div class="mb-3">
+                                            <label for="vendor-search" class="form-label">業者選択</label>
+                                            <div class="vendor-search-container position-relative">
+                                                <input type="text" class="form-control" id="vendor-search" placeholder="業者名を入力して検索..." autocomplete="off">
+                                                <div id="vendor-search-results" class="vendor-search-results"></div>
+                                                <select class="form-select mt-2" id="vendor-select" required style="display: none;">
+                                                    <option value="">業者を選択してください</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="amount" class="form-label">金額</label>
+                                            <input type="number" class="form-control" id="amount" placeholder="100000" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="description" class="form-label">摘要</label>
+                                            <input type="text" class="form-control" id="description" placeholder="工事代金" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="remarks" class="form-label">備考</label>
+                                            <input type="text" class="form-control" id="remarks" placeholder="備考（任意）">
+                                        </div>
+                                        <button type="button" class="btn btn-primary" onclick="addPaymentItem()">
+                                            <i class="fas fa-plus"></i> 追加
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-list"></i> 支払表</h5>
+                                    <div>
+                                        <button class="btn btn-success btn-sm" onclick="createPaymentList()" id="create-btn" disabled>
+                                            <i class="fas fa-save"></i> 支払表作成
+                                        </button>
+                                        <button class="btn btn-info btn-sm" onclick="generateTransferFile()" id="transfer-btn" disabled>
+                                            <i class="fas fa-download"></i> 振込ファイル
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="payment-header" class="alert alert-info" style="display: none;">
+                                        <strong>支払日:</strong> <span id="header-date"></span><br>
+                                        <strong>送金会社:</strong> <span id="header-company"></span>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped" id="payment-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>業者名</th>
+                                                    <th>金額</th>
+                                                    <th>摘要</th>
+                                                    <th>備考</th>
+                                                    <th>操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="payment-items">
+                                            </tbody>
+                                            <tfoot>
+                                                <tr class="table-warning">
+                                                    <th>合計</th>
+                                                    <th id="total-amount">0</th>
+                                                    <th colspan="3"></th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- マスターデータアップロードセクション -->
+                <div id="upload-section" class="content-section" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-upload"></i> マスターデータアップロード</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="master-file" class="form-label">ファイル選択</label>
+                                        <input type="file" class="form-control" id="master-file" accept=".csv,.xlsx,.xls">
+                                        <div class="form-text">
+                                            対応形式: CSV, Excel (.xlsx, .xls)<br>
+                                            必須列: 業者名, 銀行名, 支店名, 口座番号, 口座名義<br>
+                                            任意列: 預金種目（普通/当座）
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-primary" onclick="uploadMasterFile()">
+                                        <i class="fas fa-upload"></i> アップロード
+                                    </button>
+                                    <div id="upload-progress" class="mt-3" style="display: none;">
+                                        <div class="progress">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                        </div>
+                                        <small class="text-muted">ファイルを処理中...</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-info-circle"></i> ファイル形式について</h5>
+                                </div>
+                                <div class="card-body">
+                                    <h6>必須列</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success"></i> 業者名（会社名、名前）</li>
+                                        <li><i class="fas fa-check text-success"></i> 銀行名（銀行）</li>
+                                        <li><i class="fas fa-check text-success"></i> 支店名（支店）</li>
+                                        <li><i class="fas fa-check text-success"></i> 口座番号（口座）</li>
+                                        <li><i class="fas fa-check text-success"></i> 口座名義（名義）</li>
+                                    </ul>
+                                    <h6>任意列</h6>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-info text-info"></i> 預金種目（普通/当座、デフォルト：普通）</li>
+                                    </ul>
+                                    <div class="alert alert-info mt-3">
+                                        <small>
+                                            <i class="fas fa-lightbulb"></i>
+                                            列名は柔軟に認識されます。日本語・英語どちらでも対応可能です。
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-file-alt"></i> アップロード済みファイル</h5>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="loadUploadedFiles()">
+                                        <i class="fas fa-sync-alt"></i> 更新
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>ファイル名</th>
+                                                    <th>サイズ</th>
+                                                    <th>更新日時</th>
+                                                    <th>操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="uploaded-files-list">
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted">
+                                                        アップロード済みファイルはありません
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-bar"></i> データ統計</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <div class="border rounded p-3">
+                                                <h4 class="text-primary mb-1" id="manual-vendor-count">0</h4>
+                                                <small class="text-muted">手動登録業者</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="border rounded p-3">
+                                                <h4 class="text-success mb-1" id="upload-vendor-count">0</h4>
+                                                <small class="text-muted">アップロード業者</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 業者管理セクション -->
+                <div id="vendor-section" class="content-section" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-building"></i> 業者登録</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="vendor-form">
+                                        <div class="mb-3">
+                                            <label for="vendor-name" class="form-label">業者名</label>
+                                            <input type="text" class="form-control" id="vendor-name" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="bank-name" class="form-label">銀行名</label>
+                                            <input type="text" class="form-control" id="bank-name" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="branch-name" class="form-label">支店名</label>
+                                            <input type="text" class="form-control" id="branch-name" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="account-type" class="form-label">預金種目</label>
+                                            <select class="form-select" id="account-type" required>
+                                                <option value="1">普通</option>
+                                                <option value="2">当座</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="account-number" class="form-label">口座番号</label>
+                                            <input type="text" class="form-control" id="account-number" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="account-holder" class="form-label">口座名義</label>
+                                            <input type="text" class="form-control" id="account-holder" required>
+                                        </div>
+                                        <button type="button" class="btn btn-primary" onclick="addVendor()">
+                                            <i class="fas fa-plus"></i> 業者登録
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-list"></i> 業者一覧</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>業者名</th>
+                                                    <th>銀行</th>
+                                                    <th>支店</th>
+                                                    <th>口座番号</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="vendor-list">
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 支払履歴セクション -->
+                <div id="history-section" class="content-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-history"></i> 支払履歴</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>新機能：</strong> 「再作成」ボタンで過去の支払表をベースに新しい支払表を作成できます。支払日・金額・摘要の修正や、支払先の削除・追加が可能です。
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>作成日時</th>
+                                            <th>支払日</th>
+                                            <th>送金会社</th>
+                                            <th>件数</th>
+                                            <th>合計金額</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="payment-history">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

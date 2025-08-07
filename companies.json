@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "name": "株式会社サンプル",
+    "bank_code": "0177",
+    "bank_name": "フクオカギンコウ",
+    "branch_code": "001",
+    "branch_name": "ホンテン",
+    "account_type": 1,
+    "account_number": "1234567",
+    "client_code": "1234567890"
+  },
+  {
+    "id": 2,
+    "name": "有限会社テスト",
+    "bank_code": "0177",
+    "bank_name": "フクオカギンコウ",
+    "branch_code": "002",
+    "branch_name": "テンジン",
+    "account_type": 1,
+    "account_number": "7654321",
+    "client_code": "0987654321"
+  }
+]

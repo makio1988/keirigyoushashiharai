@@ -1,0 +1,178 @@
+[
+  {
+    "id": "20250807_085024",
+    "payment_date": "2025-08-06",
+    "remittance_company": "(株)チェック・リーシング",
+    "items": [
+      {
+        "id": 1754524192591,
+        "vendor_id": 11,
+        "vendor_name": "(株)船井総合研究所",
+        "amount": 100000,
+        "description": "konnsaru",
+        "remarks": ""
+      },
+      {
+        "id": 1754524206916,
+        "vendor_id": 11,
+        "vendor_name": "(株)船井総合研究所",
+        "amount": 500000,
+        "description": "konsaru",
+        "remarks": ""
+      },
+      {
+        "id": 1754524223056,
+        "vendor_id": 4,
+        "vendor_name": "(株)セブン商事",
+        "amount": 1988,
+        "description": "kopi-",
+        "remarks": ""
+      }
+    ],
+    "created_at": "2025-08-07T08:50:24.891392"
+  },
+  {
+    "id": "20250807_090947",
+    "payment_date": "2025-08-12",
+    "remittance_company": "株式会社チェック・リーシング(ストック口座)",
+    "items": [
+      {
+        "id": 1754525349732,
+        "vendor_id": 4,
+        "vendor_name": "(株)セブン商事",
+        "amount": 50000,
+        "description": "kopi",
+        "remarks": ""
+      },
+      {
+        "id": 1754525367102,
+        "vendor_id": 4,
+        "vendor_name": "(株)セブン商事",
+        "amount": 66000,
+        "description": "kopi",
+        "remarks": ""
+      },
+      {
+        "id": 1754525384547,
+        "vendor_id": 11,
+        "vendor_name": "(株)船井総合研究所",
+        "amount": 550000,
+        "description": "konsaru",
+        "remarks": ""
+      }
+    ],
+    "created_at": "2025-08-07T09:09:47.876709"
+  },
+  {
+    "id": "20250807_105355",
+    "payment_date": "2025-08-12",
+    "remittance_company": "㈱チェック・リーシング　メイン口座",
+    "items": [
+      {
+        "id": 1754531592321,
+        "vendor_id": 228,
+        "vendor_name": "(株)セブン商事",
+        "amount": 1000,
+        "description": "kopi-",
+        "remarks": ""
+      },
+      {
+        "id": 1754531614120,
+        "vendor_id": 228,
+        "vendor_name": "(株)セブン商事",
+        "amount": 50050,
+        "description": "kopi",
+        "remarks": ""
+      },
+      {
+        "id": 1754531633980,
+        "vendor_id": 235,
+        "vendor_name": "(株)船井総合研究所",
+        "amount": 1000000,
+        "description": "konsaru",
+        "remarks": ""
+      }
+    ],
+    "created_at": "2025-08-07T10:53:55.627640"
+  },
+  {
+    "id": "20250807_130329",
+    "payment_date": "2025-08-08",
+    "remittance_company": "(株)チェック・ライフ　管理口座",
+    "items": [
+      {
+        "id": 1754539370899,
+        "vendor_id": 320,
+        "vendor_name": "田崎屋　代表　田崎　達也",
+        "amount": 100000,
+        "description": "seisou",
+        "remarks": ""
+      },
+      {
+        "id": 1754539392708,
+        "vendor_id": 191,
+        "vendor_name": "田崎屋",
+        "amount": 200000,
+        "description": "seisou",
+        "remarks": ""
+      },
+      {
+        "id": 1754539407992,
+        "vendor_id": 4,
+        "vendor_name": "(有)朝部総建　代表取締役香月正美",
+        "amount": 50000,
+        "description": "kouzi",
+        "remarks": ""
+      }
+    ],
+    "created_at": "2025-08-07T13:03:29.477547"
+  },
+  {
+    "id": "20250807_133604",
+    "payment_date": "2025-08-20",
+    "remittance_company": "(株)チェック・ライフ　管理口座",
+    "items": [
+      {
+        "id": 1754541303695.953,
+        "vendor_id": 320,
+        "vendor_name": "田崎屋　代表　田崎　達也",
+        "amount": 100000,
+        "description": "seisou",
+        "remarks": ""
+      },
+      {
+        "id": 1754541303695.7476,
+        "vendor_id": 191,
+        "vendor_name": "田崎屋",
+        "amount": 200000,
+        "description": "seisou",
+        "remarks": ""
+      },
+      {
+        "id": 1754541303695.027,
+        "vendor_id": 4,
+        "vendor_name": "(有)朝部総建　代表取締役香月正美",
+        "amount": 50000,
+        "description": "kouzi",
+        "remarks": ""
+      },
+      {
+        "id": 1754541336318,
+        "vendor_id": 140,
+        "vendor_name": "合同会社ネコリコ",
+        "amount": 55000,
+        "description": "netto",
+        "remarks": ""
+      },
+      {
+        "id": 1754541362276,
+        "vendor_id": 83,
+        "vendor_name": "㈱ブロードエンタープライズ",
+        "amount": 26400,
+        "description": "netto",
+        "remarks": ""
+      }
+    ],
+    "created_at": "2025-08-07T13:36:04.315769"
+  }
+]
