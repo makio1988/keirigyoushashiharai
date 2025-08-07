@@ -14,6 +14,7 @@ from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 import difflib
 import unicodedata
 
@@ -300,10 +301,30 @@ def convert_for_pdf_display(text, is_header=False):
     return result
 
 def generate_payment_pdf(payment_data, vendors):
-    """支払表のPDFを生成（業者名日本語対応）"""
-    # シンプルなアプローチ: Helveticaで日本語を処理
-    japanese_font = 'Helvetica'
-    print("業者名日本語対応 PDFを生成します")
+    """支払表のPDFを生成（CIDフォントで日本語対応）"""
+    # CIDフォントで日本語を処理
+    try:
+        # ReportLabのCIDフォントを登録
+        pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
+        japanese_font = 'HeiseiKakuGo-W5'
+        print("CIDフォント HeiseiKakuGo-W5 を使用してPDFを生成します")
+    except Exception as e:
+        try:
+            # 代替フォントを試行
+            pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+            japanese_font = 'HeiseiMin-W3'
+            print("CIDフォント HeiseiMin-W3 を使用してPDFを生成します")
+        except Exception as e2:
+            try:
+                # さらに代替フォントを試行
+                pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
+                japanese_font = 'STSong-Light'
+                print("CIDフォント STSong-Light を使用してPDFを生成します")
+            except Exception as e3:
+                # 最終的なフォールバック
+                japanese_font = 'Helvetica'
+                print(f"CIDフォント登録失敗: {e}, {e2}, {e3}")
+                print("HelveticaフォントでPDFを生成します")
     
     # PDFファイル名を生成
     pdf_filename = f"payment_list_{payment_data['id']}.pdf"
@@ -327,7 +348,7 @@ def generate_payment_pdf(payment_data, vendors):
         parent=styles['Heading1'],
         fontName=japanese_font,
         fontSize=16,
-        spaceAfter=20,
+        spaceAfter=30,
         alignment=1  # 中央揃え
     )
     
