@@ -214,5 +214,45 @@
       }
     ],
     "created_at": "2025-08-07T19:39:36.993214"
+  },
+  {
+    "id": "20250807_202327",
+    "payment_date": "2025-08-22",
+    "remittance_company": "(株)チェック・ライフ　管理口座",
+    "items": [
+      {
+        "id": 1754565786995,
+        "vendor_id": 320,
+        "vendor_name": "田崎屋　代表　田崎　達也",
+        "amount": 150000,
+        "description": "seisou",
+        "remarks": ""
+      },
+      {
+        "id": 1754565786996,
+        "vendor_id": 191,
+        "vendor_name": "田崎屋",
+        "amount": 250000,
+        "description": "seisou",
+        "remarks": ""
+      },
+      {
+        "id": 1754565786997,
+        "vendor_id": 4,
+        "vendor_name": "(有)朝部総建　代表取締役香月正美",
+        "amount": 50000,
+        "description": "kouzi",
+        "remarks": ""
+      },
+      {
+        "id": 1754565786998,
+        "vendor_id": 20,
+        "vendor_name": "(株)ラストワンマイル(まるっとチェンジ（コールセンター）",
+        "amount": 1550000,
+        "description": "rakajsj",
+        "remarks": ""
+      }
+    ],
+    "created_at": "2025-08-07T20:23:27.420721"
   }
 ]

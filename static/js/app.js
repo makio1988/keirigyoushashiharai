@@ -343,9 +343,34 @@ function addPaymentItem() {
     showAlert('支払項目を追加しました', 'success');
 }
 
+// 編集中のアイテムを記録する変数
+let editingItemId = null;
+let editingValue = null;
+let debugMode = true; // デバッグモードを有効化
+
 // 支払テーブルを更新
 function updatePaymentTable() {
+    if (debugMode) {
+        console.log('=== updatePaymentTable 呼び出し ===');
+        console.log('呼び出し元:', new Error().stack);
+        console.log('編集状態:', { editingItemId, editingValue });
+    }
+    
     const tbody = document.getElementById('payment-items');
+    
+    // 編集中の値を保存
+    const editingInput = document.querySelector('.amount-input[style*="block"]');
+    if (editingInput) {
+        const editingCell = editingInput.closest('.editable-amount');
+        if (editingCell) {
+            editingItemId = parseInt(editingCell.getAttribute('data-item-id'));
+            editingValue = editingInput.value;
+            if (debugMode) {
+                console.log('編集中の値を保存:', { editingItemId, editingValue });
+            }
+        }
+    }
+    
     tbody.innerHTML = '';
     
     let total = 0;
@@ -355,7 +380,7 @@ function updatePaymentTable() {
         row.innerHTML = `
             <td>${item.vendor_name}</td>
             <td class="amount-cell editable-amount" data-item-id="${item.id}" title="クリックして編集">
-                <span class="amount-display">${item.amount.toLocaleString()}</span>
+                <span class="amount-display">${item.amount.toLocaleString('ja-JP')}</span>
                 <input type="number" class="form-control amount-input" value="${item.amount}" style="display: none;">
             </td>
             <td>${item.description}</td>
@@ -371,10 +396,13 @@ function updatePaymentTable() {
     });
     
     // 合計金額を更新
-    document.getElementById('total-amount').textContent = total.toLocaleString();
+    document.getElementById('total-amount').textContent = total.toLocaleString('ja-JP');
     
     // 金額欄の編集機能を追加
     addAmountEditHandlers();
+    
+    // 編集状態を復元
+    restoreEditingState();
     
     // ボタンの有効/無効を切り替え
     const hasItems = paymentItems.length > 0;
@@ -779,16 +807,19 @@ function recreateFromHistory(paymentId) {
             // 支払項目をクリア
             paymentItems = [];
             
-            // 過去の支払項目を復元
-            payment.items.forEach(item => {
+            // 過去の支払項目を復元（IDの一貫性を確保）
+            let baseId = Date.now();
+            payment.items.forEach((item, index) => {
+                const newId = baseId + index; // 連番でIDを生成
                 paymentItems.push({
-                    id: Date.now() + Math.random(), // 新しいIDを生成
+                    id: newId,
                     vendor_id: item.vendor_id,
                     vendor_name: item.vendor_name,
                     amount: item.amount,
                     description: item.description,
                     remarks: item.note || item.remarks || ''
                 });
+                console.log(`再作成アイテム追加: ID=${newId}, vendor=${item.vendor_name}, amount=${item.amount}`);
             });
             
             // 支払項目テーブルを更新
@@ -806,13 +837,28 @@ function recreateFromHistory(paymentId) {
         });
 }
 
-// 支払情報の変更を監視
+// 支払情報の変更を監視（編集中はテーブル再描画を防ぐ）
 document.addEventListener('DOMContentLoaded', function() {
     const paymentDate = document.getElementById('payment-date');
     const remittanceCompany = document.getElementById('remittance-company');
     
-    paymentDate.addEventListener('change', updatePaymentTable);
-    remittanceCompany.addEventListener('input', updatePaymentTable);
+    paymentDate.addEventListener('change', function() {
+        // 編集中でない場合のみテーブルを更新
+        if (editingItemId === null) {
+            updatePaymentTable();
+        } else {
+            console.log('編集中のためテーブル更新をスキップ');
+        }
+    });
+    
+    remittanceCompany.addEventListener('input', function() {
+        // 編集中でない場合のみテーブルを更新
+        if (editingItemId === null) {
+            updatePaymentTable();
+        } else {
+            console.log('編集中のためテーブル更新をスキップ');
+        }
+    });
 });
 
 // データバックアップ・復元機能
@@ -897,35 +943,99 @@ function checkBackupStatus() {
     });
 }
 
+// 編集状態を復元する関数
+function restoreEditingState() {
+    if (editingItemId !== null && editingValue !== null) {
+        const editingCell = document.querySelector(`[data-item-id="${editingItemId}"]`);
+        if (editingCell) {
+            const display = editingCell.querySelector('.amount-display');
+            const input = editingCell.querySelector('.amount-input');
+            
+            if (display && input) {
+                display.style.display = 'none';
+                input.style.display = 'block';
+                input.value = editingValue;
+                input.focus();
+                input.select();
+                
+                console.log('編集状態を復元しました:', {
+                    itemId: editingItemId,
+                    value: editingValue
+                });
+            }
+        }
+        
+        // 復元後はリセット
+        editingItemId = null;
+        editingValue = null;
+    }
+}
+
 // 金額欄の編集機能のイベントハンドラーを追加
 function addAmountEditHandlers() {
     const editableCells = document.querySelectorAll('.editable-amount');
     
     editableCells.forEach(cell => {
+        // 既にイベントハンドラーが設定されている場合はスキップ
+        if (cell.hasAttribute('data-handlers-added')) {
+            return;
+        }
+        
         const display = cell.querySelector('.amount-display');
         const input = cell.querySelector('.amount-input');
         const itemId = parseInt(cell.getAttribute('data-item-id'));
         
         // クリックで編集モードに切り替え
         display.addEventListener('click', function() {
+            // 編集状態を記録
+            editingItemId = itemId;
+            editingValue = input.value;
+            
             display.style.display = 'none';
             input.style.display = 'block';
             input.focus();
             input.select();
+            
+            console.log('編集開始:', {
+                itemId: itemId,
+                initialValue: input.value
+            });
         });
         
         // Enterキーまたはフォーカス離脱で編集完了
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 finishAmountEdit(itemId, input, display);
             } else if (e.key === 'Escape') {
+                e.preventDefault();
                 cancelAmountEdit(input, display);
             }
         });
         
-        input.addEventListener('blur', function() {
-            finishAmountEdit(itemId, input, display);
+        // 入力中にリアルタイムでデータを更新（テーブル再描画対策）
+        input.addEventListener('input', function() {
+            const newAmount = parseInt(input.value) || 0;
+            const item = paymentItems.find(item => item.id === itemId);
+            if (item) {
+                item.amount = newAmount;
+                if (debugMode) {
+                    console.log('リアルタイムデータ更新:', { itemId, newAmount });
+                }
+            }
         });
+        
+        input.addEventListener('blur', function() {
+            // 少し遅延して実行し、他のイベントとの競合を回避
+            setTimeout(() => {
+                if (input.style.display !== 'none') {
+                    finishAmountEdit(itemId, input, display);
+                }
+            }, 100);
+        });
+        
+        // ハンドラー設定済みマーク
+        cell.setAttribute('data-handlers-added', 'true');
     });
 }
 
@@ -933,17 +1043,96 @@ function addAmountEditHandlers() {
 function finishAmountEdit(itemId, input, display) {
     const newAmount = parseInt(input.value) || 0;
     
+    if (debugMode) {
+        console.log('金額編集完了:', {
+            itemId: itemId,
+            oldValue: input.defaultValue,
+            newValue: input.value,
+            newAmount: newAmount
+        });
+    }
+    
     // paymentItemsの該当項目を更新
     const item = paymentItems.find(item => item.id === itemId);
     if (item) {
+        const oldAmount = item.amount;
         item.amount = newAmount;
-        display.textContent = newAmount.toLocaleString();
+        
+        // 表示を直接更新（テーブル再描画に依存しない）
+        display.textContent = newAmount.toLocaleString('ja-JP');
+        
+        // inputのvalueも更新して次回の編集時に正しい値を表示
+        input.value = newAmount;
+        input.defaultValue = newAmount;
+        
+        if (debugMode) {
+            console.log('金額更新完了:', {
+                itemId: itemId,
+                oldAmount: oldAmount,
+                newAmount: newAmount,
+                displayText: display.textContent,
+                inputValue: input.value
+            });
+        }
         
         // 合計金額を再計算
         updateTotalAmount();
         
-        showAlert('金額を更新しました', 'success');
+        // ヘッダー情報を更新（編集後の整合性を保つ）
+        const paymentDate = document.getElementById('payment-date').value;
+        const remittanceCompany = document.getElementById('remittance-company').value;
+        if (paymentDate && remittanceCompany) {
+            updatePaymentHeader();
+        }
+        
+        showAlert(`金額を${oldAmount.toLocaleString('ja-JP')}円から${newAmount.toLocaleString('ja-JP')}円に更新しました`, 'success');
+        
+        // データ更新後に少し遅延してテーブルを再描画（最新データで更新）
+        setTimeout(() => {
+            if (debugMode) {
+                console.log('データ更新後のテーブル再描画');
+            }
+            updatePaymentTable();
+        }, 100);
+        
+    } else {
+        console.error('アイテムが見つかりません:', itemId);
+        console.error('現在のpaymentItems:', paymentItems.map(item => ({ id: item.id, vendor: item.vendor_name, amount: item.amount })));
+        console.error('検索対象itemId:', itemId, 'type:', typeof itemId);
+        
+        // 型変換を試して再検索
+        const itemAsNumber = parseInt(itemId);
+        const itemAsString = String(itemId);
+        const foundByNumber = paymentItems.find(item => item.id === itemAsNumber);
+        const foundByString = paymentItems.find(item => String(item.id) === itemAsString);
+        
+        console.error('数値変換での検索結果:', foundByNumber);
+        console.error('文字列変換での検索結果:', foundByString);
+        
+        if (foundByNumber) {
+            console.log('数値変換で見つかりました。型の不整合が原因です。');
+            foundByNumber.amount = newAmount;
+            display.textContent = newAmount.toLocaleString('ja-JP');
+            input.value = newAmount;
+            input.defaultValue = newAmount;
+            updateTotalAmount();
+            showAlert(`金額を${newAmount.toLocaleString('ja-JP')}円に更新しました（型変換で修正）`, 'success');
+        } else if (foundByString) {
+            console.log('文字列変換で見つかりました。型の不整合が原因です。');
+            foundByString.amount = newAmount;
+            display.textContent = newAmount.toLocaleString('ja-JP');
+            input.value = newAmount;
+            input.defaultValue = newAmount;
+            updateTotalAmount();
+            showAlert(`金額を${newAmount.toLocaleString('ja-JP')}円に更新しました（型変換で修正）`, 'success');
+        } else {
+            showAlert('金額の更新に失敗しました', 'error');
+        }
     }
+    
+    // 編集状態をクリア
+    editingItemId = null;
+    editingValue = null;
     
     // 表示モードに戻す
     input.style.display = 'none';
@@ -952,12 +1141,18 @@ function finishAmountEdit(itemId, input, display) {
 
 // 金額編集をキャンセル
 function cancelAmountEdit(input, display) {
+    // 編集状態をクリア
+    editingItemId = null;
+    editingValue = null;
+    
     input.style.display = 'none';
     display.style.display = 'block';
+    
+    console.log('編集をキャンセルしました');
 }
 
 // 合計金額を再計算して更新
 function updateTotalAmount() {
     const total = paymentItems.reduce((sum, item) => sum + item.amount, 0);
-    document.getElementById('total-amount').textContent = total.toLocaleString();
+    document.getElementById('total-amount').textContent = total.toLocaleString('ja-JP');
 }
