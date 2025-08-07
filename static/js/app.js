@@ -808,3 +808,85 @@ document.addEventListener('DOMContentLoaded', function() {
     paymentDate.addEventListener('change', updatePaymentTable);
     remittanceCompany.addEventListener('input', updatePaymentTable);
 });
+
+// データバックアップ・復元機能
+function createBackup() {
+    if (!confirm('現在のデータのバックアップを作成しますか？')) {
+        return;
+    }
+    
+    fetch('/api/backup/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`バックアップを作成しました！\n支払データ: ${data.payments_count}件\n業者データ: ${data.vendors_count}件`);
+        } else {
+            alert('バックアップ作成に失敗しました: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('バックアップ作成エラー:', error);
+        alert('バックアップ作成中にエラーが発生しました');
+    });
+}
+
+function restoreBackup() {
+    if (!confirm('バックアップからデータを復元しますか？\n現在のデータは上書きされます。')) {
+        return;
+    }
+    
+    fetch('/api/backup/restore', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`バックアップから復元しました！\n支払データ: ${data.payments_restored}件\n業者データ: ${data.vendors_restored}件`);
+            // ページをリロードして最新データを表示
+            location.reload();
+        } else {
+            alert('バックアップ復元に失敗しました: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('バックアップ復元エラー:', error);
+        alert('バックアップ復元中にエラーが発生しました');
+    });
+}
+
+function checkBackupStatus() {
+    fetch('/api/backup/status')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let message = `バックアップ状態\n\n`;
+            message += `バックアップファイル数: ${data.backup_count}件\n\n`;
+            
+            if (data.backup_files.length > 0) {
+                message += '最新のバックアップファイル:\n';
+                data.backup_files.slice(-3).forEach(file => {
+                    const date = new Date(file.modified).toLocaleString('ja-JP');
+                    message += `• ${file.filename} (${date})\n`;
+                });
+            } else {
+                message += 'バックアップファイルがありません。';
+            }
+            
+            alert(message);
+        } else {
+            alert('バックアップ状態確認に失敗しました: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('バックアップ状態確認エラー:', error);
+        alert('バックアップ状態確認中にエラーが発生しました');
+    });
+}

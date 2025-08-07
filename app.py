@@ -17,6 +17,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 import difflib
 import unicodedata
+from datetime import datetime
+from data_persistence import persistence_manager
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -45,16 +47,43 @@ def save_vendors(vendors):
         json.dump(vendors, f, ensure_ascii=False, indent=2)
 
 def load_payments():
-    """支払データを読み込み"""
+    """支払データを読み込み（自動復元付き）"""
+    # 通常のファイルから読み込みを試行
     if os.path.exists(PAYMENTS_FILE):
-        with open(PAYMENTS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        try:
+            with open(PAYMENTS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if data:  # データがある場合
+                    return data
+        except Exception as e:
+            print(f"支払データ読み込みエラー: {e}")
+    
+    # メインファイルがないか空の場合、バックアップから復元を試行
+    try:
+        restored_data = persistence_manager.auto_restore_payments()
+        if restored_data:
+            print(f"バックアップから支払データを復元しました: {len(restored_data)}件")
+            # 復元したデータをメインファイルに保存
+            with open(PAYMENTS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(restored_data, f, ensure_ascii=False, indent=2)
+            return restored_data
+    except Exception as e:
+        print(f"バックアップ復元エラー: {e}")
+    
     return []
 
 def save_payments(payments):
-    """支払データを保存"""
+    """支払データを保存（自動バックアップ付き）"""
+    # 通常の保存
     with open(PAYMENTS_FILE, 'w', encoding='utf-8') as f:
         json.dump(payments, f, ensure_ascii=False, indent=2)
+    
+    # 自動バックアップ実行
+    try:
+        persistence_manager.auto_backup_payments(payments)
+        print(f"支払データのバックアップを作成しました: {len(payments)}件")
+    except Exception as e:
+        print(f"バックアップエラー: {e}")
 
 def load_companies():
     """送金会社データを業者マスターデータから取得"""
@@ -1138,6 +1167,79 @@ def generate_transfer_file(payment_id):
         as_attachment=True,
         download_name=filename
     )
+
+@app.route('/api/backup/create', methods=['POST'])
+def create_manual_backup():
+    """手動バックアップ作成"""
+    try:
+        payments = load_payments()
+        vendors = load_vendors()
+        
+        # 支払データのバックアップ
+        payments_backup = persistence_manager.backup_to_file(payments, "manual_payments")
+        
+        # 業者データのバックアップ
+        vendors_backup = persistence_manager.backup_to_file(vendors, "manual_vendors")
+        
+        return jsonify({
+            'success': True,
+            'message': '手動バックアップを作成しました',
+            'payments_backup': payments_backup,
+            'vendors_backup': vendors_backup,
+            'payments_count': len(payments),
+            'vendors_count': len(vendors)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/backup/restore', methods=['POST'])
+def restore_manual_backup():
+    """手動バックアップから復元"""
+    try:
+        # 支払データの復元
+        restored_payments = persistence_manager.restore_from_file("manual_payments")
+        if restored_payments:
+            save_payments(restored_payments)
+        
+        # 業者データの復元
+        restored_vendors = persistence_manager.restore_from_file("manual_vendors")
+        if restored_vendors:
+            save_vendors(restored_vendors)
+        
+        return jsonify({
+            'success': True,
+            'message': 'バックアップから復元しました',
+            'payments_restored': len(restored_payments) if restored_payments else 0,
+            'vendors_restored': len(restored_vendors) if restored_vendors else 0
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/backup/status', methods=['GET'])
+def backup_status():
+    """バックアップ状態確認"""
+    try:
+        backup_dir = persistence_manager.backup_dir
+        backup_files = []
+        
+        if os.path.exists(backup_dir):
+            for filename in os.listdir(backup_dir):
+                if filename.endswith('.backup'):
+                    filepath = os.path.join(backup_dir, filename)
+                    stat = os.stat(filepath)
+                    backup_files.append({
+                        'filename': filename,
+                        'size': stat.st_size,
+                        'modified': datetime.fromtimestamp(stat.st_mtime).isoformat()
+                    })
+        
+        return jsonify({
+            'success': True,
+            'backup_files': backup_files,
+            'backup_count': len(backup_files)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     import os
