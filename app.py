@@ -1070,8 +1070,8 @@ if __name__ == '__main__':
         save_vendors([])
     if not os.path.exists('payments.json'):
         save_payments([])
-    if not os.path.exists('remittance_companies.json'):
-        save_remittance_companies([])
+    if not os.path.exists('companies.json'):
+        save_companies([])
     
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
