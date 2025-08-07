@@ -226,44 +226,38 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def convert_japanese_to_romaji(text):
+    """日本語テキストをローマ字・英語表記に変換（クラウド環境対応）"""
+    if not text:
+        return ''
+    
+    # 基本的な日本語キーワードを英語に変換
+    conversion_map = {
+        '支払日': 'Payment Date',
+        '送金会社名': 'Remittance Company',
+        '作成日時': 'Created At',
+        '業者支払表': 'Vendor Payment List',
+        '業者名': 'Vendor Name',
+        '金額': 'Amount',
+        '摘要': 'Description',
+        '合計': 'Total',
+        '小計': 'Subtotal',
+        '不明': 'Unknown',
+        '円': 'JPY'
+    }
+    
+    result = text
+    for japanese, english in conversion_map.items():
+        result = result.replace(japanese, english)
+    
+    return result
+
 def generate_payment_pdf(payment_data, vendors):
-    """支払表のPDFを生成"""
-    # 日本語フォントを登録（システムフォントを使用）
-    try:
-        # Windowsのシステムフォントを試行（より多くのパスを試行）
-        font_paths = [
-            'C:/Windows/Fonts/msgothic.ttc',  # MS ゴシック
-            'C:/Windows/Fonts/msmincho.ttc',  # MS 明朝
-            'C:/Windows/Fonts/msgothic.ttf',  # MS ゴシック (TTF)
-            'C:/Windows/Fonts/msmincho.ttf',  # MS 明朝 (TTF)
-            'C:/Windows/Fonts/NotoSansCJK-Regular.ttc',  # Noto Sans CJK
-            'C:/Windows/Fonts/NotoSansJP-Regular.otf',   # Noto Sans JP
-            'C:/Windows/Fonts/yugothm.ttc',  # 遊ゴシック Medium
-            'C:/Windows/Fonts/yugothb.ttc',  # 遊ゴシック Bold
-            'C:/Windows/Fonts/BIZ-UDGothicR.ttc',  # BIZ UDゴシック
-            'C:/Windows/Fonts/BIZ-UDMinchoM.ttc'   # BIZ UD明朝
-        ]
-        
-        japanese_font = None
-        for font_path in font_paths:
-            if os.path.exists(font_path):
-                try:
-                    pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
-                    japanese_font = 'JapaneseFont'
-                    print(f"日本語フォント登録成功: {font_path}")
-                    break
-                except Exception as font_error:
-                    print(f"フォント登録失敗 {font_path}: {font_error}")
-                    continue
-        
-        # システムフォントが見つからない場合はデフォルトを使用
-        if not japanese_font:
-            japanese_font = 'Helvetica'  # フォールバック
-            print("警告: 日本語フォントが見つかりません。Helveticaを使用します。")
-            
-    except Exception as e:
-        print(f"フォント登録エラー: {e}")
-        japanese_font = 'Helvetica'
+    """支払表のPDFを生成（クラウド環境対応）"""
+    # クラウド環境対応: ReportLabの標準フォントを使用
+    # 日本語文字は英数字・記号に変換して表示
+    japanese_font = 'Helvetica'
+    print("クラウド環境対応: Helveticaフォントを使用してPDFを生成します")
     
     # PDFファイル名を生成
     pdf_filename = f"payment_list_{payment_data['id']}.pdf"
@@ -291,16 +285,16 @@ def generate_payment_pdf(payment_data, vendors):
         alignment=1  # 中央揃え
     )
     
-    # タイトル
-    title = Paragraph("業者支払表", title_style)
+    # タイトル（英語表記に変換）
+    title = Paragraph(convert_japanese_to_romaji("業者支払表"), title_style)
     elements.append(title)
     elements.append(Spacer(1, 12))
     
-    # 支払情報
+    # 支払情報（英語表記に変換）
     info_data = [
-        ['支払日', payment_data['payment_date']],
-        ['送金会社名', payment_data['remittance_company']],
-        ['作成日時', payment_data['created_at'][:19].replace('T', ' ')]
+        [convert_japanese_to_romaji('支払日'), payment_data['payment_date']],
+        [convert_japanese_to_romaji('送金会社名'), payment_data['remittance_company']],
+        [convert_japanese_to_romaji('作成日時'), payment_data['created_at'][:19].replace('T', ' ')]
     ]
     
     info_table = Table(info_data, colWidths=[40*mm, 100*mm])
@@ -325,8 +319,8 @@ def generate_payment_pdf(payment_data, vendors):
             vendor_groups[vendor_id] = []
         vendor_groups[vendor_id].append(item)
     
-    # 支払明細テーブル（銀行情報を削除し摘要欄を拡大）
-    table_data = [['No.', '業者名', '金額', '摘要']]
+    # 支払明細テーブル（英語表記に変換）
+    table_data = [['No.', convert_japanese_to_romaji('業者名'), convert_japanese_to_romaji('金額'), convert_japanese_to_romaji('摘要')]]
     
     total_amount = 0
     row_number = 1
@@ -344,7 +338,7 @@ def generate_payment_pdf(payment_data, vendors):
             
             table_data.append([
                 str(row_number),
-                vendor.get('name', '不明'),
+                vendor.get('name', convert_japanese_to_romaji('不明')),
                 f"{amount:,}",
                 item.get('description', '')
             ])
@@ -354,13 +348,13 @@ def generate_payment_pdf(payment_data, vendors):
         if len(items) > 1:
             table_data.append([
                 '',
-                f"【{vendor.get('name', '不明')} 小計】",
+                f"[{vendor.get('name', convert_japanese_to_romaji('不明'))} {convert_japanese_to_romaji('小計')}]",
                 f"{vendor_subtotal:,}",
                 ''
             ])
     
     # 合計行を追加
-    table_data.append(['', '合計', f"{total_amount:,}", ''])
+    table_data.append(['', convert_japanese_to_romaji('合計'), f"{total_amount:,}", ''])
     
     # テーブルを作成（摘要欄を大幅に拡大）
     payment_table = Table(table_data, colWidths=[15*mm, 60*mm, 30*mm, 85*mm])
