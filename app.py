@@ -1060,5 +1060,18 @@ def generate_transfer_file(payment_id):
 
 if __name__ == '__main__':
     import os
+    
+    # Render環境対応: 必要なディレクトリを作成
+    os.makedirs('uploads', exist_ok=True)
+    os.makedirs('static/pdfs', exist_ok=True)
+    
+    # データファイルの初期化確認
+    if not os.path.exists('vendors.json'):
+        save_vendors([])
+    if not os.path.exists('payments.json'):
+        save_payments([])
+    if not os.path.exists('remittance_companies.json'):
+        save_remittance_companies([])
+    
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
