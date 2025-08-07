@@ -221,3 +221,72 @@ input[type="number"] {
     border-color: #f5c6cb;
     color: #721c24;
 }
+
+/* 編集可能な金額欄 */
+.editable-amount {
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+.editable-amount:hover {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.editable-amount .amount-display {
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    min-width: 80px;
+    text-align: right;
+}
+
+.editable-amount:hover .amount-display {
+    background-color: #e9ecef;
+    border: 1px dashed #007bff;
+}
+
+.editable-amount .amount-input {
+    width: 100%;
+    text-align: right;
+    border: 2px solid #007bff;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 14px;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.editable-amount .amount-input:focus {
+    outline: none;
+    border-color: #0056b3;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.4);
+}
+
+/* 金額欄のツールチップ風スタイル */
+.editable-amount[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 5px;
+}
+
+.editable-amount[title]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+    z-index: 1000;
+}

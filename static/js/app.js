@@ -354,7 +354,10 @@ function updatePaymentTable() {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${item.vendor_name}</td>
-            <td class="amount-cell">${item.amount.toLocaleString()}</td>
+            <td class="amount-cell editable-amount" data-item-id="${item.id}" title="クリックして編集">
+                <span class="amount-display">${item.amount.toLocaleString()}</span>
+                <input type="number" class="form-control amount-input" value="${item.amount}" style="display: none;">
+            </td>
             <td>${item.description}</td>
             <td>${item.remarks || '-'}</td>
             <td>
@@ -369,6 +372,9 @@ function updatePaymentTable() {
     
     // 合計金額を更新
     document.getElementById('total-amount').textContent = total.toLocaleString();
+    
+    // 金額欄の編集機能を追加
+    addAmountEditHandlers();
     
     // ボタンの有効/無効を切り替え
     const hasItems = paymentItems.length > 0;
@@ -889,4 +895,69 @@ function checkBackupStatus() {
         console.error('バックアップ状態確認エラー:', error);
         alert('バックアップ状態確認中にエラーが発生しました');
     });
+}
+
+// 金額欄の編集機能のイベントハンドラーを追加
+function addAmountEditHandlers() {
+    const editableCells = document.querySelectorAll('.editable-amount');
+    
+    editableCells.forEach(cell => {
+        const display = cell.querySelector('.amount-display');
+        const input = cell.querySelector('.amount-input');
+        const itemId = parseInt(cell.getAttribute('data-item-id'));
+        
+        // クリックで編集モードに切り替え
+        display.addEventListener('click', function() {
+            display.style.display = 'none';
+            input.style.display = 'block';
+            input.focus();
+            input.select();
+        });
+        
+        // Enterキーまたはフォーカス離脱で編集完了
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                finishAmountEdit(itemId, input, display);
+            } else if (e.key === 'Escape') {
+                cancelAmountEdit(input, display);
+            }
+        });
+        
+        input.addEventListener('blur', function() {
+            finishAmountEdit(itemId, input, display);
+        });
+    });
+}
+
+// 金額編集を完了
+function finishAmountEdit(itemId, input, display) {
+    const newAmount = parseInt(input.value) || 0;
+    
+    // paymentItemsの該当項目を更新
+    const item = paymentItems.find(item => item.id === itemId);
+    if (item) {
+        item.amount = newAmount;
+        display.textContent = newAmount.toLocaleString();
+        
+        // 合計金額を再計算
+        updateTotalAmount();
+        
+        showAlert('金額を更新しました', 'success');
+    }
+    
+    // 表示モードに戻す
+    input.style.display = 'none';
+    display.style.display = 'block';
+}
+
+// 金額編集をキャンセル
+function cancelAmountEdit(input, display) {
+    input.style.display = 'none';
+    display.style.display = 'block';
+}
+
+// 合計金額を再計算して更新
+function updateTotalAmount() {
+    const total = paymentItems.reduce((sum, item) => sum + item.amount, 0);
+    document.getElementById('total-amount').textContent = total.toLocaleString();
 }
