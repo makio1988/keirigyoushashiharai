@@ -275,7 +275,7 @@ def convert_to_ascii_safe(text):
     
     return ascii_result
 
-def convert_for_pdf_display(text, is_header=False):
+def convert_for_pdf_display(text, is_header=False, max_length=None):
     """テキストをPDF表示用に変換（全て日本語保持、問題文字のみ置換）"""
     if not text:
         return ''
@@ -297,6 +297,21 @@ def convert_for_pdf_display(text, is_header=False):
     
     for problem_char, replacement in problem_chars.items():
         result = result.replace(problem_char, replacement)
+    
+    # 最大長が指定されている場合、改行を挿入
+    if max_length and len(result) > max_length:
+        # 適切な位置で改行を挿入
+        words = []
+        current_line = ''
+        for char in result:
+            if len(current_line) >= max_length:
+                words.append(current_line)
+                current_line = char
+            else:
+                current_line += char
+        if current_line:
+            words.append(current_line)
+        result = '\n'.join(words)
     
     return result
 
@@ -405,9 +420,9 @@ def generate_payment_pdf(payment_data, vendors):
             
             table_data.append([
                 str(row_number),
-                convert_for_pdf_display(vendor.get('name', '不明')),
+                convert_for_pdf_display(vendor.get('name', '不明'), max_length=15),  # 業者名は15文字で改行
                 f"{amount:,}",
-                convert_for_pdf_display(item.get('description', ''))
+                convert_for_pdf_display(item.get('description', ''), max_length=20)  # 摘要は20文字で改行
             ])
             row_number += 1
         
@@ -415,7 +430,7 @@ def generate_payment_pdf(payment_data, vendors):
         if len(items) > 1:
             table_data.append([
                 '',
-                f"[{convert_for_pdf_display(vendor.get('name', '不明'))} {convert_for_pdf_display('小計')}]",
+                f"[{convert_for_pdf_display(vendor.get('name', '不明'), max_length=12)} {convert_for_pdf_display('小計')}]",  # 小計行は短めに
                 f"{vendor_subtotal:,}",
                 ''
             ])
@@ -423,8 +438,8 @@ def generate_payment_pdf(payment_data, vendors):
     # 合計行を追加
     table_data.append(['', convert_for_pdf_display('合計'), f"{total_amount:,}", ''])
     
-    # テーブルを作成（摘要欄を大幅に拡大）
-    payment_table = Table(table_data, colWidths=[15*mm, 60*mm, 30*mm, 85*mm])
+    # テーブルを作成（業者名列を拡大、バランス調整）
+    payment_table = Table(table_data, colWidths=[12*mm, 75*mm, 28*mm, 75*mm])
     
     # 基本スタイルを設定
     table_style = [
@@ -450,6 +465,11 @@ def generate_payment_pdf(payment_data, vendors):
         
         # 金額列を右揃え（第3列に変更）
         ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
+        
+        # テキスト折り返し設定（業者名列と摘要列）
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('WORDWRAP', (1, 0), (1, -1), True),  # 業者名列
+        ('WORDWRAP', (3, 0), (3, -1), True),  # 摘要列
     ]
     
     # 小計行のスタイルを追加（小計行を識別して背景色を設定）
