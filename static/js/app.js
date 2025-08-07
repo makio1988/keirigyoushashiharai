@@ -4,6 +4,11 @@ let companies = [];  // 送金会社データ
 let paymentItems = [];
 let currentPaymentId = null;
 
+// 金額をカンマ区切りでフォーマット（日本語短縮形を避ける）
+function formatAmount(amount) {
+    return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 // ページ読み込み時の初期化
 document.addEventListener('DOMContentLoaded', function() {
     loadVendors();
@@ -380,7 +385,7 @@ function updatePaymentTable() {
         row.innerHTML = `
             <td>${item.vendor_name}</td>
             <td class="amount-cell editable-amount" data-item-id="${item.id}" title="クリックして編集">
-                <span class="amount-display">${item.amount.toLocaleString('ja-JP')}</span>
+                <span class="amount-display">${formatAmount(item.amount)}</span>
                 <input type="number" class="form-control amount-input" value="${item.amount}" style="display: none;">
             </td>
             <td>${item.description}</td>
@@ -396,7 +401,7 @@ function updatePaymentTable() {
     });
     
     // 合計金額を更新
-    document.getElementById('total-amount').textContent = total.toLocaleString('ja-JP');
+    document.getElementById('total-amount').textContent = formatAmount(total);
     
     // 金額欄の編集機能を追加
     addAmountEditHandlers();
@@ -571,7 +576,7 @@ function updatePaymentHistory(payments) {
             <td>${paymentDateFormatted}</td>
             <td>${payment.remittance_company}</td>
             <td>${payment.items.length}件</td>
-            <td>${totalAmount.toLocaleString()}円</td>
+            <td>${formatAmount(totalAmount)}円</td>
             <td>
                 <button class="btn btn-info btn-sm me-1" onclick="recreateFromHistory('${payment.id}')" title="この支払表をベースに新しい支払表を作成">
                     <i class="fas fa-copy"></i> 再作成
@@ -1059,7 +1064,7 @@ function finishAmountEdit(itemId, input, display) {
         item.amount = newAmount;
         
         // 表示を直接更新（テーブル再描画に依存しない）
-        display.textContent = newAmount.toLocaleString('ja-JP');
+        display.textContent = formatAmount(newAmount);
         
         // inputのvalueも更新して次回の編集時に正しい値を表示
         input.value = newAmount;
@@ -1085,7 +1090,7 @@ function finishAmountEdit(itemId, input, display) {
             updatePaymentHeader();
         }
         
-        showAlert(`金額を${oldAmount.toLocaleString('ja-JP')}円から${newAmount.toLocaleString('ja-JP')}円に更新しました`, 'success');
+        showAlert(`金額を${formatAmount(oldAmount)}円から${formatAmount(newAmount)}円に更新しました`, 'success');
         
         // データ更新後に少し遅延してテーブルを再描画（最新データで更新）
         setTimeout(() => {
@@ -1112,19 +1117,19 @@ function finishAmountEdit(itemId, input, display) {
         if (foundByNumber) {
             console.log('数値変換で見つかりました。型の不整合が原因です。');
             foundByNumber.amount = newAmount;
-            display.textContent = newAmount.toLocaleString('ja-JP');
+            display.textContent = formatAmount(newAmount);
             input.value = newAmount;
             input.defaultValue = newAmount;
             updateTotalAmount();
-            showAlert(`金額を${newAmount.toLocaleString('ja-JP')}円に更新しました（型変換で修正）`, 'success');
+            showAlert(`金額を${formatAmount(newAmount)}円に更新しました（型変換で修正）`, 'success');
         } else if (foundByString) {
             console.log('文字列変換で見つかりました。型の不整合が原因です。');
             foundByString.amount = newAmount;
-            display.textContent = newAmount.toLocaleString('ja-JP');
+            display.textContent = formatAmount(newAmount);
             input.value = newAmount;
             input.defaultValue = newAmount;
             updateTotalAmount();
-            showAlert(`金額を${newAmount.toLocaleString('ja-JP')}円に更新しました（型変換で修正）`, 'success');
+            showAlert(`金額を${formatAmount(newAmount)}円に更新しました（型変換で修正）`, 'success');
         } else {
             showAlert('金額の更新に失敗しました', 'error');
         }
@@ -1154,5 +1159,5 @@ function cancelAmountEdit(input, display) {
 // 合計金額を再計算して更新
 function updateTotalAmount() {
     const total = paymentItems.reduce((sum, item) => sum + item.amount, 0);
-    document.getElementById('total-amount').textContent = total.toLocaleString('ja-JP');
+    document.getElementById('total-amount').textContent = formatAmount(total);
 }
