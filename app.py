@@ -226,12 +226,12 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def convert_japanese_to_romaji(text):
-    """日本語テキストをローマ字・英語表記に変換（クラウド環境対応）"""
+def convert_to_ascii_safe(text):
+    """テキストを完全にASCII安全な文字に変換（クラウド環境対応）"""
     if not text:
         return ''
     
-    # 基本的な日本語キーワードを英語に変換
+    # 日本語キーワードを英語に完全変換
     conversion_map = {
         '支払日': 'Payment Date',
         '送金会社名': 'Remittance Company',
@@ -243,14 +243,36 @@ def convert_japanese_to_romaji(text):
         '合計': 'Total',
         '小計': 'Subtotal',
         '不明': 'Unknown',
-        '円': 'JPY'
+        '円': 'JPY',
+        # 追加の変換ルール
+        '【': '[',
+        '】': ']',
+        '「': '"',
+        '」': '"',
+        '・': '-',
+        '、': ',',
+        '。': '.'
     }
     
     result = text
+    # 日本語キーワードを先に変換
     for japanese, english in conversion_map.items():
         result = result.replace(japanese, english)
     
-    return result
+    # 非-ASCII文字を除去または置換
+    ascii_result = ''
+    for char in result:
+        if ord(char) < 128:  # ASCII文字のみ
+            ascii_result += char
+        else:
+            # 非-ASCII文字はスペースまたは'?'に置換
+            ascii_result += ' '
+    
+    # 連続するスペースを一つに統一
+    import re
+    ascii_result = re.sub(r'\s+', ' ', ascii_result).strip()
+    
+    return ascii_result
 
 def generate_payment_pdf(payment_data, vendors):
     """支払表のPDFを生成（クラウド環境対応）"""
@@ -285,16 +307,16 @@ def generate_payment_pdf(payment_data, vendors):
         alignment=1  # 中央揃え
     )
     
-    # タイトル（英語表記に変換）
-    title = Paragraph(convert_japanese_to_romaji("業者支払表"), title_style)
+    # タイトル（ASCII安全な文字に変換）
+    title = Paragraph(convert_to_ascii_safe("業者支払表"), title_style)
     elements.append(title)
     elements.append(Spacer(1, 12))
     
-    # 支払情報（英語表記に変換）
+    # 支払情報（ASCII安全な文字に変換）
     info_data = [
-        [convert_japanese_to_romaji('支払日'), payment_data['payment_date']],
-        [convert_japanese_to_romaji('送金会社名'), payment_data['remittance_company']],
-        [convert_japanese_to_romaji('作成日時'), payment_data['created_at'][:19].replace('T', ' ')]
+        [convert_to_ascii_safe('支払日'), payment_data['payment_date']],
+        [convert_to_ascii_safe('送金会社名'), convert_to_ascii_safe(payment_data['remittance_company'])],
+        [convert_to_ascii_safe('作成日時'), payment_data['created_at'][:19].replace('T', ' ')]
     ]
     
     info_table = Table(info_data, colWidths=[40*mm, 100*mm])
@@ -319,8 +341,8 @@ def generate_payment_pdf(payment_data, vendors):
             vendor_groups[vendor_id] = []
         vendor_groups[vendor_id].append(item)
     
-    # 支払明細テーブル（英語表記に変換）
-    table_data = [['No.', convert_japanese_to_romaji('業者名'), convert_japanese_to_romaji('金額'), convert_japanese_to_romaji('摘要')]]
+    # 支払明細テーブル（ASCII安全な文字に変換）
+    table_data = [['No.', convert_to_ascii_safe('業者名'), convert_to_ascii_safe('金額'), convert_to_ascii_safe('摘要')]]
     
     total_amount = 0
     row_number = 1
@@ -338,9 +360,9 @@ def generate_payment_pdf(payment_data, vendors):
             
             table_data.append([
                 str(row_number),
-                vendor.get('name', convert_japanese_to_romaji('不明')),
+                convert_to_ascii_safe(vendor.get('name', '不明')),
                 f"{amount:,}",
-                item.get('description', '')
+                convert_to_ascii_safe(item.get('description', ''))
             ])
             row_number += 1
         
@@ -348,13 +370,13 @@ def generate_payment_pdf(payment_data, vendors):
         if len(items) > 1:
             table_data.append([
                 '',
-                f"[{vendor.get('name', convert_japanese_to_romaji('不明'))} {convert_japanese_to_romaji('小計')}]",
+                f"[{convert_to_ascii_safe(vendor.get('name', '不明'))} {convert_to_ascii_safe('小計')}]",
                 f"{vendor_subtotal:,}",
                 ''
             ])
     
     # 合計行を追加
-    table_data.append(['', convert_japanese_to_romaji('合計'), f"{total_amount:,}", ''])
+    table_data.append(['', convert_to_ascii_safe('合計'), f"{total_amount:,}", ''])
     
     # テーブルを作成（摘要欄を大幅に拡大）
     payment_table = Table(table_data, colWidths=[15*mm, 60*mm, 30*mm, 85*mm])
